@@ -106,7 +106,8 @@ class Msix {
   Future<void> _buildMsixFiles() async {
     if (_config.buildWindows) await WindowsBuild().build();
 
-    Progress loggerProgress = _logger.progress('building msix files');
+    Progress loggerProgress = _logger
+        .progress('building msix files path - >${_config.buildFilesFolder}');
 
     await _config.validateWindowsBuildFiles();
     Assets assets = Assets();
