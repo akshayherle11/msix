@@ -44,6 +44,10 @@ class Configuration {
   String? outputPath;
   String? outputName;
   String? publishFolderPath;
+
+  //custom config
+  YamlList? extrafiles;
+
   int hoursBetweenUpdateChecks = 0;
   bool automaticBackgroundTask = false;
   bool updateBlocksActivation = false;
@@ -105,6 +109,11 @@ class Configuration {
         yaml['trim_logo']?.toString().toLowerCase() == 'false') {
       trimLogo = false;
     }
+    //custom
+    if (yaml['extra_files'] != null) {
+      extrafiles = yaml['extra_files'];
+    }
+
     store = _args.wasParsed('store') ||
         yaml['store']?.toString().toLowerCase() == 'true';
     createWithDebugBuildFiles = _args.wasParsed('debug') ||

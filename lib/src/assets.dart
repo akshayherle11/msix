@@ -269,6 +269,36 @@ class Assets {
         .copyDirectory(Directory(_config.buildFilesFolder));
   }
 
+  // copy custom files
+
+  Future<void> copyFiles(String sourceFile, String destination_path) async {
+    _logger.trace('copying custom files'.blue);
+
+    String flutter_destination_path =
+        p.join(_config.buildFilesFolder, destination_path);
+
+    Directory directory = Directory(flutter_destination_path);
+    if (!(await directory.exists())) {
+      await directory.create(recursive: true);
+    }
+    await File(sourceFile)
+        .copy(p.join(flutter_destination_path, p.basename(sourceFile)));
+  }
+
+  Future<void> copyFolder(String sourcePath, String destination_path) async {
+    _logger.trace('copying custom folders'.blue);
+    //check if folder is created or not
+    String flutter_destination_path =
+        p.join(_config.buildFilesFolder, destination_path);
+    //   _logger.write("Destination ${flutter_destination_path}");
+    Directory directory = Directory(flutter_destination_path);
+    if (!(await directory.exists())) {
+      await directory.create(recursive: true);
+    }
+    await Directory(sourcePath)
+        .copyDirectory(Directory(flutter_destination_path));
+  }
+
   Future<void> copyContextMenuDll(String dllPath) async {
     _logger.trace('copying context menu dll');
 

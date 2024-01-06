@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:cli_util/cli_logging.dart';
 import 'package:get_it/get_it.dart';
+import 'package:yaml/yaml.dart';
 import 'src/app_installer.dart';
 import 'src/windows_build.dart';
 import 'src/configuration.dart';
@@ -26,10 +27,30 @@ class Msix {
   /// Execute with the `msix:build` command
   Future<void> build() async {
     await _initConfig();
+
+    // _logger.write("Custom Config - > ${_config.extrafiles}");
+
     await _buildMsixFiles();
     String msixStyledPath = File(_msixOutputPath).parent.path.blue.emphasized;
     _logger
         .write('${'unpackaged msix files created in: '.green}$msixStyledPath');
+  }
+
+  Future<void> copy() async {
+    await _initConfig();
+
+    /// check if the appx manifest is exist
+    String appxManifestPath =
+        p.join(_config.buildFilesFolder, 'AppxManifest.xml');
+    if (!(await File(appxManifestPath).exists())) {
+      String error = 'run "msix:build" first';
+      _logger.stderr(error.red);
+      exit(-1);
+    }
+
+    _logger.write("Copying !".green);
+    await _copyFiles();
+    _logger.write("Done\n".green);
   }
 
   /// Execute with the `msix:pack` command
@@ -115,6 +136,12 @@ class Msix {
     await assets.createIcons();
     await assets.copyVCLibsFiles();
 
+    // bool copyExtra = await _checkFileExists(_config.extrafiles);
+
+    // if (copyExtra) {
+    //   await assets.copyFiles(_config.extrafiles as String);
+    // }
+
     if (_config.contextMenuConfiguration?.comSurrogateServers.isNotEmpty ==
         true) {
       for (var element
@@ -129,6 +156,47 @@ class Msix {
     await AppxManifest().generateAppxManifest();
     await MakePri().generatePRI();
 
+    loggerProgress.finish(showTiming: true);
+  }
+
+  Future<void> _copyFiles() async {
+    Progress loggerProgress = _logger.progress('Copying files/folders\n');
+
+    if (_config.extrafiles != null) {
+      Assets assets = Assets();
+      //loop over YamlList
+      YamlList list = _config.extrafiles as YamlList;
+      for (int i = 0; i < list.length; i++) {
+        String type = list[i]["type"];
+        String source_path = list[i]["source_path"];
+        String destination_path = list[i]["destination_path"];
+        //print logs
+        _logger.write('File type - > ${type}\n'.gray);
+        _logger.write('Source  - > ${source_path}\n'.gray);
+        _logger.write('Destination  - > ${destination_path}\n'.gray);
+        //check file type
+        if (type == "file") {
+          bool isValid = await _checkFileExists(source_path);
+          //  _logger.write('is valid ${isValid}\n');
+          if (isValid) {
+            //valid file
+            assets.copyFiles(source_path, destination_path);
+          } else {
+            _logger.write("File Does't Exit !!\n".red);
+          }
+        } else if (type == "folder") {
+          bool isValid = await _checkFolderExists(source_path);
+          if (isValid) {
+            //valid file
+            assets.copyFolder(source_path, destination_path);
+          } else {
+            _logger.write("Folder Does't Exit !!\n".red);
+          }
+        } else {
+          _logger.write("Invlid Type !!\n".red);
+        }
+      }
+    }
     loggerProgress.finish(showTiming: true);
   }
 
@@ -151,6 +219,14 @@ class Msix {
     }
 
     loggerProgress.finish(showTiming: true);
+  }
+
+  Future<bool> _checkFileExists(String? path) {
+    return File(path!).exists();
+  }
+
+  Future<bool> _checkFolderExists(String? path) {
+    return Directory(path!).exists();
   }
 
   /// print the location of the created msix file
